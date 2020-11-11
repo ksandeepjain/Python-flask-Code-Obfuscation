@@ -1,0 +1,86 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+########################################################
+# This program builds .so files from .py files
+# Before running it, please take backup of your code
+# deletePyflag to delete .py files after build
+# deleteCflag to delete .c files after build
+# deletePycflag to delete .pyc files after build
+# install cpython and pathlib libraries:
+# sudo pip install pathlib
+# sudo pip install cython
+# Command to run build:
+# python3.5 compile.py build_ext --inplace
+########################################################
+
+from distutils.core import setup
+from distutils.extension import Extension
+from Cython.Build import cythonize
+from pathlib import Path
+import os
+import sys
+
+# argvcnt = len(sys.argv)
+
+deletePyflag = True
+deleteCflag = True
+deletePycflag = True
+buildflg = True
+
+# Get current folder path
+
+mash_path = os.path.dirname(sys.argv[0])
+
+### Get .py files
+
+files = list(Path(mash_path).glob('**/*.py'))
+extensions = []
+excludefiles = ['compile', '__init__', 'server', 'routes']
+
+### build .so files from .py files ###
+
+if buildflg:
+    for file in files:
+
+        # Take out file name without .py ext
+
+        filename = Path(file).resolve().stem
+        if file.stat().st_size != 0 and filename not in excludefiles:
+            relpath = \
+                os.path.relpath(os.path.dirname(file.absolute().as_posix()),
+                                mash_path)
+            packagename = (relpath.replace('/', '.') + '.'
+                           + filename if relpath != '.' else filename)
+            print relpath + ':' + packagename
+            extensions.append([Extension(packagename, [str(file)])])
+
+    for ext in extensions:
+        setup(ext_modules=cythonize(ext,
+              compiler_directives={'c_string_type': 'str',
+              'c_string_encoding': 'utf8', 'language_level': 3}))
+
+### delete *.py files ###
+
+if deletePyflag:
+    for file in files:
+        filename = Path(file).resolve().stem
+        if filename not in excludefiles:
+            file.unlink()
+
+### delete *.c files #####
+
+if deleteCflag:
+    cfiles = list(Path(mash_path).glob('**/*.c'))
+    for cfile in cfiles:
+        filename = Path(cfile).resolve().stem
+        if filename not in excludefiles:
+            cfile.unlink()
+
+### delete *.pyc files #####
+
+if deletePycflag:
+    pycfiles = list(Path(mash_path).glob('**/*.pyc'))
+    for pycfile in pycfiles:
+        filename = Path(pycfile).resolve().stem
+        if filename not in excludefiles:
+            pycfile.unlink()
